@@ -2,6 +2,8 @@ const std = @import("std");
 const math = std.math;
 const rl = @import("raylib");
 
+const Viewport = @import("stellar.zig").Viewport;
+
 pub const Object = struct {
     x: f32 = 400,
     y: f32 = 100,
@@ -19,11 +21,11 @@ pub const Object = struct {
         self.y = self.y + self.dir.y;
     }
 
-    pub fn draw(self: Object) void {
-        const x = @as(i32, @intFromFloat(self.x));
-        const y = @as(i32, @intFromFloat(self.y));
-
-        rl.drawCircle(x, y, self.radius, self.color);
+    pub fn draw(self: Object, viewport: Viewport) void {
+        const screenX: i32 = @as(i32, @intFromFloat((self.x - viewport.offset.x) * viewport.scale));
+        const screenY: i32 = @as(i32, @intFromFloat((self.y - viewport.offset.y) * viewport.scale));
+        const screenRadius: f32 = self.radius * viewport.scale;
+        rl.drawCircle(screenX, screenY, screenRadius, self.color);
     }
 
     pub fn distanceTo(self: Object, other: Object) f32 {

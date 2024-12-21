@@ -2,16 +2,24 @@ const std = @import("std");
 const rl = @import("raylib");
 const Obj = @import("objects.zig").Object;
 
+pub const Viewport = struct {
+    offset: rl.Vector2,
+    scale: f32,
+};
+
 pub const Stellar = struct {
-    width: i32 = 1024,
-    height: i32 = 800,
+    width: i32 = 1600,
+    height: i32 = 900,
     color: rl.Color = rl.Color.white,
+    viewport: Viewport = .{
+        .offset = .{ .x = 0.0, .y = 0.0 },
+        .scale = 1.0,
+    },
     allocator: std.mem.Allocator,
     objects: std.ArrayList(Obj),
 
     pub fn init(allocator: std.mem.Allocator) Stellar {
         const objects = std.ArrayList(Obj).init(allocator);
-
         return Stellar{ .allocator = allocator, .objects = objects };
     }
 
@@ -21,6 +29,18 @@ pub const Stellar = struct {
 
     pub fn addObj(self: *Stellar, obj: Obj) !void {
         try self.objects.append(obj);
+    }
+
+    pub fn updateObjects(self: Stellar) void {
+        for (self.objects.items) |*obj| {
+            obj.update();
+        }
+    }
+
+    pub fn drawObjects(self: Stellar) void {
+        for (self.objects.items) |obj| {
+            obj.draw(self.viewport);
+        }
     }
 
     pub fn calcForces(self: Stellar) !void {
@@ -42,7 +62,6 @@ pub const Stellar = struct {
         for (self.objects.items, obj_forces.items) |*obj, force| {
             obj.dir = force;
         }
-        // std.debug.print("All forces {any}\n", .{obj_forces.items});
     }
 
     pub fn checkColl(self: Stellar) !void {
@@ -68,6 +87,57 @@ pub const Stellar = struct {
             for (pairs.items) |pair| {
                 std.debug.print("Collision pair: {d}-{d}\n", .{ pair[0], pair[1] });
             }
+        }
+    }
+
+    pub fn updateViewport(self: *Stellar) void {
+        const move_speed: f32 = 10.0; // Adjust panning speed
+        const zoom_speed: f32 = 0.1; // Adjust zoom speed
+
+        // Mouse Drag Panning
+        if (rl.isMouseButtonDown(rl.MouseButton.mouse_button_left)) {
+            const mouse_delta = rl.getMouseDelta();
+            self.viewport.offset.x -= mouse_delta.x / self.viewport.scale;
+            self.viewport.offset.y -= mouse_delta.y / self.viewport.scale;
+        } else { // keyboard Panning
+            if (rl.isKeyDown(rl.KeyboardKey.key_right)) {
+                self.viewport.offset.x += move_speed / self.viewport.scale;
+            }
+            if (rl.isKeyDown(rl.KeyboardKey.key_left)) {
+                self.viewport.offset.x -= move_speed / self.viewport.scale;
+            }
+            if (rl.isKeyDown(rl.KeyboardKey.key_down)) {
+                self.viewport.offset.y += move_speed / self.viewport.scale;
+            }
+            if (rl.isKeyDown(rl.KeyboardKey.key_up)) {
+                self.viewport.offset.y -= move_speed / self.viewport.scale;
+            }
+        }
+
+        // Zooming around the mouse cursor
+        const mouse_position = rl.getMousePosition();
+        const pre_zoom_world_mouse_x = (mouse_position.x / self.viewport.scale) + self.viewport.offset.x;
+        const pre_zoom_world_mouse_y = (mouse_position.y / self.viewport.scale) + self.viewport.offset.y;
+
+        const wheel_move = rl.getMouseWheelMove();
+        if (wheel_move > 0) {
+            self.viewport.scale *= 1.0 + zoom_speed; // Zoom in
+        } else if (wheel_move < 0) {
+            self.viewport.scale /= 1.0 + zoom_speed; // Zoom out
+        }
+
+        const post_zoom_world_mouse_x = (mouse_position.x / self.viewport.scale) + self.viewport.offset.x;
+        const post_zoom_world_mouse_y = (mouse_position.y / self.viewport.scale) + self.viewport.offset.y;
+
+        self.viewport.offset.x += pre_zoom_world_mouse_x - post_zoom_world_mouse_x;
+        self.viewport.offset.y += pre_zoom_world_mouse_y - post_zoom_world_mouse_y;
+
+        // Keep scale in reasonable bounds
+        if (self.viewport.scale < 0.1) {
+            self.viewport.scale = 0.1;
+        }
+        if (self.viewport.scale > 10.0) {
+            self.viewport.scale = 10.0;
         }
     }
 };
