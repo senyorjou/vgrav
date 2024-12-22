@@ -90,16 +90,14 @@ pub const Stellar = struct {
         }
     }
 
-    pub fn updateViewport(self: *Stellar) void {
-        const move_speed: f32 = 10.0; // Adjust panning speed
-        const zoom_speed: f32 = 0.1; // Adjust zoom speed
+    fn handlePanning(self: *Stellar) void {
+        const move_speed: f32 = 10.0;
 
-        // Mouse Drag Panning
         if (rl.isMouseButtonDown(rl.MouseButton.mouse_button_left)) {
             const mouse_delta = rl.getMouseDelta();
             self.viewport.offset.x -= mouse_delta.x / self.viewport.scale;
             self.viewport.offset.y -= mouse_delta.y / self.viewport.scale;
-        } else { // keyboard Panning
+        } else {
             if (rl.isKeyDown(rl.KeyboardKey.key_right)) {
                 self.viewport.offset.x += move_speed / self.viewport.scale;
             }
@@ -113,17 +111,20 @@ pub const Stellar = struct {
                 self.viewport.offset.y -= move_speed / self.viewport.scale;
             }
         }
+    }
 
-        // Zooming around the mouse cursor
+    fn handleZoom(self: *Stellar) void {
+        const zoom_speed: f32 = 0.1;
+
         const mouse_position = rl.getMousePosition();
         const pre_zoom_world_mouse_x = (mouse_position.x / self.viewport.scale) + self.viewport.offset.x;
         const pre_zoom_world_mouse_y = (mouse_position.y / self.viewport.scale) + self.viewport.offset.y;
 
         const wheel_move = rl.getMouseWheelMove();
         if (wheel_move > 0) {
-            self.viewport.scale *= 1.0 + zoom_speed; // Zoom in
+            self.viewport.scale *= 1.0 + zoom_speed;
         } else if (wheel_move < 0) {
-            self.viewport.scale /= 1.0 + zoom_speed; // Zoom out
+            self.viewport.scale /= 1.0 + zoom_speed;
         }
 
         const post_zoom_world_mouse_x = (mouse_position.x / self.viewport.scale) + self.viewport.offset.x;
@@ -139,6 +140,11 @@ pub const Stellar = struct {
         if (self.viewport.scale > 10.0) {
             self.viewport.scale = 10.0;
         }
+    }
+
+    pub fn updateViewport(self: *Stellar) void {
+        self.handlePanning();
+        self.handleZoom();
     }
 };
 
